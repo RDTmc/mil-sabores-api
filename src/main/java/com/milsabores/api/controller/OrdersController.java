@@ -5,9 +5,10 @@ import com.milsabores.api.service.OrdersService.CreateOrderRequest;
 import com.milsabores.api.service.OrdersService.OrderResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -20,12 +21,14 @@ public class OrdersController {
     }
 
     @PostMapping
-    public ResponseEntity<OrderResponse> create(@RequestBody CreateOrderRequest req) {
+    public ResponseEntity<OrderResponse> create(@AuthenticationPrincipal Jwt jwt,
+        @RequestBody CreateOrderRequest req) {
         try {
-            // Validación muy básica de payload
-            if (req == null || req.items == null || req.items.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El carrito no puede estar vacío.");
+            // fuerza el userId desde el JWT (issuer: Supabase)
+            if (jwt == null || jwt.getSubject() == null) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token inválido");
             }
+            req.userId = jwt.getSubject(); // UUID de Supabase (auth.uid())
             OrderResponse out = service.createOrder(req);
             return ResponseEntity.status(HttpStatus.CREATED).body(out);
         } catch (IllegalArgumentException iae) {
