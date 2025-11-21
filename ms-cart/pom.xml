@@ -5,59 +5,65 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- Hereda del POM padre -->
     <parent>
-        <groupId>com.milsabores</groupId>
-        <artifactId>api</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.7</version>
+        <relativePath/>
     </parent>
 
-    <artifactId>ms-orders</artifactId>
-    <name>ms-orders</name>
-    <description>Microservicio de Órdenes y Carrito - Mil Sabores</description>
+    <groupId>com.milsabores</groupId>
+    <artifactId>ms-cart</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>ms-cart</name>
+    <description>Microservicio de carrito para React Mil Sabores</description>
+
+    <properties>
+        <java.version>21</java.version>
+    </properties>
 
     <dependencies>
-        <!-- Web / JSON -->
+        <!-- Web REST -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Validación DTOs -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-
-        <!-- órdenes/carritos en BD, JPA y PostgreSQLc
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency> -->
-
-        <!-- PostgreSQL (BD / Supabase)
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency> -->
-
-        <!-- Seguridad básica (para atar usuario -> carrito / órdenes) -->
+        <!-- Seguridad: lo usaremos como Resource Server JWT más adelante -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- Resource Server (JWT) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
 
-        <!-- JWK / JOSE -->
+        <!-- JPA (persistir carrito en Supabase) -->
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-oauth2-jose</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL (Supabase) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Lombok para reducir boilerplate -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Validación (Bean Validation / Jakarta) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
         <!-- Tests -->
@@ -66,7 +72,6 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
@@ -77,5 +82,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

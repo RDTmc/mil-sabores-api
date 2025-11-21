@@ -4,10 +4,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.cache.annotation.Cacheable;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Servicio ahora conectado a Supabase mediante ProductosDao.
@@ -15,8 +13,6 @@ import java.util.Locale;
  */
 @Service
 public class ProductosService {
-
-
 
     /* ======== DTOs públicos (sin cambios para el Controller) ======== */
     public static class Product {
@@ -56,17 +52,17 @@ public class ProductosService {
         // --- Getters para serialización JSON (camelCase y alias snake_case) ---
 
         @JsonProperty("imagePath")
-        public String getImagePath() {                 // usa el campo imagePath de esta clase
+        public String getImagePath() {
             return normalizeImagePath(this.imagePath);
         }
 
         @JsonProperty("image_path")
-        public String getImage_path() {                // alias para compatibilidad con front
+        public String getImage_path() {
             return normalizeImagePath(this.imagePath);
         }
 
         @JsonProperty("category_id")
-        public Integer getCategory_id() {              // alias snake_case
+        public Integer getCategory_id() {
             return this.categoryId;
         }
     }
@@ -131,15 +127,6 @@ public class ProductosService {
         if (r == null) return null;
         return new Category(r.id, r.name);
     }
-
-    private static String normalizeImagePath(String path) {
-        if (path == null || path.isBlank()) return path;
-        if (path.startsWith("http://") || path.startsWith("https://")) return path;
-        // asegúrate de servir las imágenes desde /public/img en Vite
-        String p = path.startsWith("/") ? path : ("/" + path);
-        return p.replaceAll("//+", "/");
-    }
-
 
     /* ======== API del servicio ======== */
     public PagedProducts listProducts(String q, Integer categoryId, String sort, int page, int size) throws RuntimeException {

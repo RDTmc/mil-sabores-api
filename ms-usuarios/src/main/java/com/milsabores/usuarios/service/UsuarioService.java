@@ -3,8 +3,11 @@ package com.milsabores.usuarios.service;
 import com.milsabores.usuarios.model.UsuarioEntity;
 import com.milsabores.usuarios.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -15,8 +18,8 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
 
-    // Para este MVP usamos el encoder directamente aquí
-    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    // Ahora usamos el PasswordEncoder que viene desde SecurityConfig
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Registra un usuario nuevo en la BD.
@@ -58,6 +61,12 @@ public class UsuarioService {
 
         return user;
     }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
 
     public boolean emailExists(String email) {
         return usuarioRepository.existsByEmail(email.toLowerCase());

@@ -16,7 +16,10 @@ import org.springframework.context.annotation.Configuration;
                 contact = @Contact(name = "Mil Sabores")
         ),
         servers = {
-                @Server(url = "http://localhost:9090/", description = "Local Dev")
+                @Server(
+                        url = "http://localhost:8081/api",
+                        description = "Local Dev"
+                )
         },
         tags = {
                 @Tag(name = "Products", description = "Listado y detalle de productos"),
@@ -25,5 +28,5 @@ import org.springframework.context.annotation.Configuration;
         }
 )
 public class OpenApiConfig {
-    // Configuración mínima: springdoc detecta automáticamente los endpoints.
+        // Configuración mínima: springdoc detecta automáticamente los endpoints.
 }

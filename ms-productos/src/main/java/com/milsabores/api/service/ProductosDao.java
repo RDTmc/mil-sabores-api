@@ -135,7 +135,6 @@ public class ProductosDao {
         params.add(safeSize);
         params.add(offset);
 
-
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = prepare(conn, sql.toString(), params);
              ResultSet rs = ps.executeQuery()) {

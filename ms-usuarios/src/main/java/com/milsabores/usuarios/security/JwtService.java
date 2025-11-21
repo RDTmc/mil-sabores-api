@@ -28,13 +28,6 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    /**
-     * Genera un JWT HS256 con:
-     *  - sub: id del usuario
-     *  - email: correo
-     *  - role: rol (CUSTOMER, ADMIN, etc.)
-     *  - iss, iat, exp
-     */
     public String generateToken(UsuarioEntity user) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);

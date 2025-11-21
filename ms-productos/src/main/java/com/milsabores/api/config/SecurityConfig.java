@@ -6,10 +6,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
-import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -29,34 +31,41 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {}) // usa tu configuración CORS existente
+                .cors(cors -> { }) // usa tu configuración CORS existente (CorsConfig)
                 .authorizeHttpRequests(auth -> auth
                         // público: catálogo + swagger + debug
                         .requestMatchers(HttpMethod.GET,
-                                "/api/products/**",
-                                "/api/categories/**",
-                                "/api/featured/**",
-                                "/api/_debug/**",
-                                "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**").permitAll()
-                        // protegido: crear orden requiere JWT
-                        .requestMatchers(HttpMethod.POST, "/api/orders").authenticated()
-                        // resto: permitir por ahora
+                                "/products/**",
+                                "/categories/**",
+                                "/featured/**",
+                                "/_debug/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/api-docs/**"
+                        ).permitAll()
+                        // resto: por ahora permitido
                         .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.decoder(jwtDecoder()).jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                        .jwt(jwt -> jwt
+                                .decoder(jwtDecoder())
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                        )
                 );
+
         return http.build();
     }
 
     @Bean
     JwtDecoder jwtDecoder() {
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(supabase.getJwks()).build();
+        NimbusJwtDecoder decoder = NimbusJwtDecoder
+                .withJwkSetUri(supabase.getJwks())
+                .build();
 
-        OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(supabase.getIssuer());
-        // si más adelante quieres validar "aud", puedes encadenar otro validador acá.
+        OAuth2TokenValidator<Jwt> withIssuer =
+                JwtValidators.createDefaultWithIssuer(supabase.getIssuer());
+
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(withIssuer));
-
         return decoder;
     }
 
