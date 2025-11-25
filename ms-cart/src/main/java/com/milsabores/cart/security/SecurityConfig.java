@@ -14,8 +14,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -53,6 +57,39 @@ public class SecurityConfig {
                 );
 
         return http.build();
+    }
+
+    /**
+     * Configuración CORS para permitir llamadas desde el frontend (React)
+     * y, en general, orígenes de desarrollo.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        // En dev: aceptar cualquier origen (puedes restringir a http://localhost:5173 si quieres)
+        config.setAllowedOriginPatterns(List.of("*"));
+
+        // Métodos permitidos
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // Headers permitidos (incluimos X-User-Id y Authorization)
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "X-User-Id"
+        ));
+
+        // Para dev no necesitamos cookies
+        config.setAllowCredentials(false);
+
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // Con context-path /api, esto cubre /api/cart/**, etc.
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     /**
