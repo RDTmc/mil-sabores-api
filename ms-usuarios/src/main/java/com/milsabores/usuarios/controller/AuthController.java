@@ -30,7 +30,9 @@ public class AuthController {
                     request.getEmail(),
                     request.getPassword(),
                     request.getFullName(),
-                    request.getPhone()
+                    request.getPhone(),
+                    request.getBirthDate(),
+                    request.getRegistrationCode()
             );
 
             AuthDtos.UsuarioPublicDto dto = new AuthDtos.UsuarioPublicDto(
@@ -59,7 +61,7 @@ public class AuthController {
                     request.getPassword()
             );
 
-            // 🔐 Ahora generamos un JWT real
+            // Ahora generamos un JWT real
             String jwt = jwtService.generateToken(u);
 
             AuthDtos.LoginResponse response = new AuthDtos.LoginResponse(

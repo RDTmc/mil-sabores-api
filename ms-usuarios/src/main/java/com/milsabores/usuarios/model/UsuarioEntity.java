@@ -2,6 +2,7 @@ package com.milsabores.usuarios.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -33,6 +34,22 @@ public class UsuarioEntity {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    /**
+     * Fecha de nacimiento del usuario.
+     * Se usa para:
+     *  - Calcular si es adulto mayor (50+)
+     *  - Detectar cumpleaños (promo Duoc)
+     */
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    /**
+     * Código con el que se registró, por ejemplo "FELICES50".
+     * Sirve para saber si aplica la promo 10% de por vida.
+     */
+    @Column(name = "registration_code", length = 50)
+    private String registrationCode;
 
     @PrePersist
     public void prePersist() {
