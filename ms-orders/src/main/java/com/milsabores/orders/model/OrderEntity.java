@@ -37,7 +37,32 @@ public class OrderEntity {
     private String status;
 
     /**
-     * Monto total (en pesos, entero).
+     * Subtotal (antes de descuentos).
+     */
+    @Column(name = "subtotal_amount", nullable = false)
+    private Integer subtotalAmount;
+
+    /**
+     * Monto de descuento aplicado (positivo).
+     */
+    @Column(name = "discount_amount", nullable = false)
+    private Integer discountAmount;
+
+    /**
+     * Código interno de la promoción aplicada.
+     * Ej: "ADULTO_MAYOR", "FELICES50", "DUOC_CUMPLE"
+     */
+    @Column(name = "discount_code", length = 50)
+    private String discountCode;
+
+    /**
+     * Descripción amigable de la promoción para mostrar al usuario.
+     */
+    @Column(name = "discount_description", length = 255)
+    private String discountDescription;
+
+    /**
+     * Monto total final (subtotal - descuento).
      */
     @Column(name = "total_amount", nullable = false)
     private Integer totalAmount;
@@ -75,6 +100,10 @@ public class OrderEntity {
         if (createdAt == null) createdAt = now;
         if (updatedAt == null) updatedAt = now;
         if (status == null) status = "CREATED";
+        if (subtotalAmount == null) subtotalAmount = 0;
+        if (discountAmount == null) discountAmount = 0;
+        // discountCode y discountDescription pueden quedar en null sin problema
+        if (totalAmount == null) totalAmount = 0;
     }
 
     @PreUpdate

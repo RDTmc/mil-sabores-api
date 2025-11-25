@@ -10,6 +10,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
@@ -56,6 +59,54 @@ public class OrdersController {
     }
 
     /**
+     * Construye los datos mínimos del usuario para el cálculo de promociones,
+     * leyendo los claims del JWT.
+     */
+    private UserPromoData extractUserPromoData(Jwt jwt, String userId) {
+        String email = null;
+        LocalDate birthDate = null;
+        String registrationCode = null;
+
+        if (jwt != null) {
+            // email
+            Object emailClaim = jwt.getClaim("email");
+            if (emailClaim instanceof String e && !e.isBlank()) {
+                email = e;
+            }
+
+            // birthDate en formato dd-MM-yyyy (como lo pusimos en el JWT)
+            Object birthDateClaim = jwt.getClaim("birthDate");
+            if (birthDateClaim instanceof String s && !s.isBlank()) {
+                DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+                try {
+                    birthDate = LocalDate.parse(s, fmt);
+                } catch (DateTimeParseException ex) {
+                    // Si viene mal formateada, simplemente la ignoramos
+                }
+            }
+
+            // registrationCode (ej: FELICES50)
+            Object regCodeClaim = jwt.getClaim("registrationCode");
+            if (regCodeClaim instanceof String rc && !rc.isBlank()) {
+                registrationCode = rc;
+            }
+        }
+
+        return new UserPromoData(userId, email, birthDate, registrationCode);
+    }
+
+    /**
+     * DTO interno (solo para ms-orders) con los datos necesarios para promos.
+     */
+    private record UserPromoData(
+            String userId,
+            String email,
+            LocalDate birthDate,
+            String registrationCode
+    ) {
+    }
+
+    /**
      * POST /api/orders
      * Crea una nueva orden para el usuario autenticado.
      *
@@ -78,7 +129,16 @@ public class OrdersController {
     ) {
         try {
             String userId = resolveUserId(jwt, userIdHeader, userIdParam);
-            OrderDtos.OrderResponse response = orderService.createOrder(userId, request);
+            UserPromoData promoData = extractUserPromoData(jwt, userId);
+
+            OrderDtos.OrderResponse response = orderService.createOrder(
+                    promoData.userId(),
+                    promoData.email(),
+                    promoData.birthDate(),
+                    promoData.registrationCode(),
+                    request
+            );
+
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity

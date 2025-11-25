@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -17,29 +18,60 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final PromotionService promotionService;
 
     /**
      * Crea una orden nueva para el usuario a partir del payload recibido.
-     * Por ahora asumimos que el frontend manda el snapshot de los ítems
-     * (normalmente el contenido del carrito).
+     * El userId viene resuelto desde el JWT o headers desde el controlador.
+     * También recibimos email, birthDate y registrationCode para evaluar promos.
      */
     @Transactional
-    public OrderDtos.OrderResponse createOrder(String userId, OrderDtos.CreateOrderRequest request) {
+    public OrderDtos.OrderResponse createOrder(
+            String userId,
+            String email,
+            LocalDate birthDate,
+            String registrationCode,
+            OrderDtos.CreateOrderRequest request
+    ) {
 
-        // Calcular total (suma de unitPrice * quantity)
-        int totalAmount = request.getItems().stream()
+        // 1) Calcular subtotal (suma de unitPrice * quantity)
+        int subtotal = request.getItems().stream()
                 .mapToInt(i -> i.getUnitPrice() * i.getQuantity())
                 .sum();
 
+        // 2) Evaluar promoción según datos del usuario
+        PromotionService.AppliedPromotion promo =
+                promotionService.evaluatePromotion(email, birthDate, registrationCode, LocalDate.now());
+
+        int discountAmount = 0;
+        String discountCode = null;
+        String discountDescription = null;
+
+        if (promo != null) {
+            discountAmount = subtotal * promo.percentage() / 100;
+            if (discountAmount > subtotal) {
+                discountAmount = subtotal; // por seguridad
+            }
+            discountCode = promo.code();
+            discountDescription = promo.description();
+        }
+
+        int totalAmount = subtotal - discountAmount;
+
+        // 3) Construir la entidad OrderEntity
         OrderEntity order = OrderEntity.builder()
                 .userId(userId)
                 .status("CREATED") // se podría cambiar a PAID luego de confirmar pago
+                .subtotalAmount(subtotal)
+                .discountAmount(discountAmount)
+                .discountCode(discountCode)
+                .discountDescription(discountDescription)
                 .totalAmount(totalAmount)
                 .paymentMethod(request.getPaymentMethod())
                 .shippingAddress(request.getShippingAddress())
                 .build();
 
-        // Mapear ítems de request → entidades
+        // 4) Mapear ítems de request → entidades
         List<OrderItemEntity> items = request.getItems().stream()
                 .map(reqItem -> OrderItemEntity.builder()
                         .order(order)
@@ -107,6 +139,10 @@ public class OrderService {
                 .id(order.getId())
                 .userId(order.getUserId())
                 .status(order.getStatus())
+                .subtotalAmount(order.getSubtotalAmount())
+                .discountAmount(order.getDiscountAmount())
+                .discountCode(order.getDiscountCode())
+                .discountDescription(order.getDiscountDescription())
                 .totalAmount(order.getTotalAmount())
                 .paymentMethod(order.getPaymentMethod())
                 .shippingAddress(order.getShippingAddress())

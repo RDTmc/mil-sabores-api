@@ -90,7 +90,33 @@ public class OrderDtos {
         private String id;
         private String userId;
         private String status;
+
+        /**
+         * Subtotal de la compra (antes de descuentos).
+         */
+        private Integer subtotalAmount;
+
+        /**
+         * Monto de descuento aplicado (positivo).
+         */
+        private Integer discountAmount;
+
+        /**
+         * Código interno de la promo aplicada.
+         * Ej: "ADULTO_MAYOR", "FELICES50", "DUOC_CUMPLE"
+         */
+        private String discountCode;
+
+        /**
+         * Descripción de la promo para mostrar en la UI.
+         */
+        private String discountDescription;
+
+        /**
+         * Total final (subtotal - descuento).
+         */
         private Integer totalAmount;
+
         private String paymentMethod;
         private String shippingAddress;
         private LocalDateTime createdAt;
