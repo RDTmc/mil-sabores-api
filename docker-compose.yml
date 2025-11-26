@@ -1,0 +1,20 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: milsabores-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: milsaboresdb
+      POSTGRES_USER: milsabores
+      POSTGRES_PASSWORD: milsabores123
+      TZ: America/Santiago
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./db-init:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
