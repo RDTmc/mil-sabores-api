@@ -6,12 +6,11 @@ import com.milsabores.api.service.ProductosService.Product;
 import com.milsabores.api.service.ProductosService.Category;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -20,8 +19,8 @@ import java.util.Set;
 
 @RestController
 @RequestMapping
+@Tag(name = "Products", description = "Catálogo público de productos")
 public class ProductoController {
-
 
     private final ProductosService service;
 
@@ -30,6 +29,7 @@ public class ProductoController {
     }
 
     /* ========== Helpers de validación ========== */
+
     private static final Set<String> SORT_WHITELIST = Set.of(
             "price", "-price", "name", "-name", "createdAt", "-createdAt"
     );
@@ -50,21 +50,15 @@ public class ProductoController {
         }
     }
 
-    /* ========== Endpoints ========== */
+    /* ========== Endpoints PÚBLICOS ========== */
 
-    @Tag(name = "Products")
     @Operation(
             summary = "Listar productos",
-            description = "Paginación, búsqueda (q en nombre/descripcion), filtro por categoría y orden permitido.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Página de productos",
-                            content = @Content(schema = @Schema(implementation = PagedProducts.class))),
-                    @ApiResponse(responseCode = "400", description = "Parámetros inválidos",
-                            content = @Content(schema = @Schema(example = "{\"message\":\"size debe estar en el rango [1..100]\"}"))),
-                    @ApiResponse(responseCode = "500", description = "Error interno",
-                            content = @Content(schema = @Schema(example = "{\"message\":\"Error interno\"}")))
-            }
+            description = "Devuelve una página de productos con búsqueda, filtro por categoría y ordenación."
     )
+    @ApiResponse(responseCode = "200", description = "Página de productos devuelta correctamente")
+    @ApiResponse(responseCode = "400", description = "Parámetros inválidos")
+    @ApiResponse(responseCode = "500", description = "Error interno")
     @GetMapping("/products")
     public ResponseEntity<PagedProducts> listProducts(
             @Parameter(description = "Página (0-index)", example = "0")
@@ -83,70 +77,142 @@ public class ProductoController {
         return ResponseEntity.ok(result);
     }
 
-    @Tag(name = "Products")
     @Operation(
             summary = "Detalle de producto",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Producto encontrado",
-                            content = @Content(schema = @Schema(implementation = Product.class))),
-                    @ApiResponse(responseCode = "404", description = "No encontrado",
-                            content = @Content(schema = @Schema(example = "{\"message\":\"Producto no encontrado\"}"))),
-                    @ApiResponse(responseCode = "500", description = "Error interno",
-                            content = @Content(schema = @Schema(example = "{\"message\":\"Error interno\"}")))
-            }
+            description = "Obtiene el detalle de un producto por su ID (ej. TC001)."
     )
+    @ApiResponse(responseCode = "200", description = "Producto encontrado")
+    @ApiResponse(responseCode = "404", description = "Producto no encontrado")
+    @ApiResponse(responseCode = "500", description = "Error interno")
     @GetMapping("/products/{id}")
     public ResponseEntity<?> getProduct(
             @Parameter(description = "ID del producto (ej. TC001)", example = "TC001")
             @PathVariable("id") String id
     ) {
-        var p = service.getProduct(id);
-        if (p == null) return ResponseEntity.status(404).body(new ErrorBody("Producto no encontrado"));
+        Product p = service.getProduct(id);
+        if (p == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorBody("Producto no encontrado"));
+        }
         return ResponseEntity.ok(p);
     }
 
-    @Tag(name = "Categories")
     @Operation(
             summary = "Listar categorías",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "OK",
-                            content = @Content(schema = @Schema(implementation = Category.class))),
-                    @ApiResponse(responseCode = "500", description = "Error interno",
-                            content = @Content(schema = @Schema(example = "{\"message\":\"Error interno\"}")))
-            }
+            description = "Devuelve el listado de categorías disponibles."
     )
+    @ApiResponse(responseCode = "200", description = "Listado de categorías devuelto correctamente")
+    @ApiResponse(responseCode = "500", description = "Error interno")
     @GetMapping("/categories")
     public ResponseEntity<List<Category>> listCategories() {
         return ResponseEntity.ok(service.listCategories());
     }
 
-    @Tag(name = "Featured")
     @Operation(
             summary = "Productos destacados",
-            description = "Devuelve productos ya ordenados por posición.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "OK",
-                            content = @Content(schema = @Schema(implementation = Product.class))),
-                    @ApiResponse(responseCode = "500", description = "Error interno",
-                            content = @Content(schema = @Schema(example = "{\"message\":\"Error interno\"}")))
-            }
+            description = "Devuelve los productos marcados como destacados, ya ordenados por posición."
     )
+    @ApiResponse(responseCode = "200", description = "Listado de productos destacados devuelto correctamente")
+    @ApiResponse(responseCode = "500", description = "Error interno")
     @GetMapping("/featured")
     public ResponseEntity<List<Product>> listFeatured() {
         return ResponseEntity.ok(service.listFeatured());
     }
 
-    /* ======== ErrorBody simple para 404/errores puntuales ======== */
-    public static class ErrorBody {
-        public String message;
-        public ErrorBody() {}
-        public ErrorBody(String message) { this.message = message; }
-    }
-
+    @Operation(
+            summary = "Debug de conexión a BD",
+            description = "Endpoint de depuración para verificar conexión a la base de datos."
+    )
+    @ApiResponse(responseCode = "200", description = "Información de debug devuelta correctamente")
     @GetMapping("/_debug/db")
-    public ResponseEntity<java.util.Map<String,Object>> debugDb() {
-        var map = service.debug(); // ya lo tenías en el service
+    public ResponseEntity<java.util.Map<String, Object>> debugDb() {
+        var map = service.debug();
         return ResponseEntity.ok(map);
     }
 
+    /* ========== Endpoints ADMIN (crear / editar / borrar productos) ========== */
+
+    @Operation(
+            summary = "Crear producto (ADMIN)",
+            description = "Crea un nuevo producto en el catálogo. Requiere rol ADMIN."
+    )
+    @ApiResponse(responseCode = "201", description = "Producto creado correctamente")
+    @ApiResponse(responseCode = "400", description = "Datos inválidos")
+    @ApiResponse(responseCode = "500", description = "Error interno")
+    @PostMapping("/products")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Product> createProduct(@RequestBody Product input) {
+        try {
+            Product created = service.createProduct(input);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (RuntimeException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al crear producto");
+        }
+    }
+
+    @Operation(
+            summary = "Actualizar producto (ADMIN)",
+            description = "Actualiza un producto existente. Requiere rol ADMIN."
+    )
+    @ApiResponse(responseCode = "200", description = "Producto actualizado correctamente")
+    @ApiResponse(responseCode = "400", description = "Datos inválidos")
+    @ApiResponse(responseCode = "404", description = "Producto no encontrado")
+    @ApiResponse(responseCode = "500", description = "Error interno")
+    @PutMapping("/products/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Product> updateProduct(
+            @PathVariable("id") String id,
+            @RequestBody Product input
+    ) {
+        try {
+            Product updated = service.updateProduct(id, input);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "Error de validación";
+            if (msg.toLowerCase().contains("no encontrado")) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, msg);
+            }
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, msg);
+        } catch (RuntimeException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al actualizar producto");
+        }
+    }
+
+    @Operation(
+            summary = "Eliminar producto (ADMIN)",
+            description = "Elimina un producto por ID. Requiere rol ADMIN."
+    )
+    @ApiResponse(responseCode = "204", description = "Producto eliminado correctamente")
+    @ApiResponse(responseCode = "404", description = "Producto no encontrado")
+    @ApiResponse(responseCode = "500", description = "Error interno")
+    @DeleteMapping("/products/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteProduct(@PathVariable("id") String id) {
+        try {
+            service.deleteProduct(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "Error de validación";
+            if (msg.toLowerCase().contains("no encontrado")) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, msg);
+            }
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, msg);
+        } catch (RuntimeException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al eliminar producto");
+        }
+    }
+
+    /* ======== ErrorBody simple para 404/errores puntuales ======== */
+    public static class ErrorBody {
+        public String message;
+
+        public ErrorBody() {
+        }
+
+        public ErrorBody(String message) {
+            this.message = message;
+        }
+    }
 }
