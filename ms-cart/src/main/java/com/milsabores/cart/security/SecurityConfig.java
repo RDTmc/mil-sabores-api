@@ -1,8 +1,5 @@
 package com.milsabores.cart.security;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,11 +10,15 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -26,80 +27,91 @@ import java.util.List;
 public class SecurityConfig {
 
     /**
-     * Misma clave secreta que usa ms-usuarios para firmar los JWT HS256.
-     * Debe coincidir EXACTAMENTE con app.jwt.secret de ms-usuarios y ms-orders.
+     * Misma clave secreta que usa ms-usuarios (JwtService).
+     * Debe coincidir con app.jwt.secret en application.properties.
      */
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
         http
-                // API stateless → sin CSRF y sin sesión de servidor
-                .csrf(csrf -> csrf.disable())
+                // CORS
                 .cors(Customizer.withDefaults())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                // API stateless con JWT
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Permitimos OPTIONS para CORS preflight
+                        // OPTIONS (preflight CORS)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Todo lo demás requiere JWT válido
+
+                        // Swagger abierto
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/api-docs/**"
+                        ).permitAll()
+
+                        // Endpoints del carrito: requieren estar autenticado
+                        // (con context-path /api, la URL real es /api/cart/**)
+                        .requestMatchers("/cart/**").authenticated()
+
+                        // Cualquier otra cosa también autenticada
                         .anyRequest().authenticated()
                 )
-                // Nada de login por formulario ni Basic
-                .httpBasic(httpBasic -> httpBasic.disable())
+                .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
-                // Configuramos este MS como Resource Server de JWT (Bearer tokens)
+                // Resource Server con JWT
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.decoder(jwtDecoder()))
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 );
 
         return http.build();
     }
 
     /**
-     * Configuración CORS para permitir llamadas desde el frontend (React)
-     * y, en general, orígenes de desarrollo.
+     * CORS para dev: permitimos cualquier origen.
+     * Luego el frontend React puede llamar sin problemas.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // En dev: aceptar cualquier origen (puedes restringir a http://localhost:5173 si quieres)
         config.setAllowedOriginPatterns(List.of("*"));
-
-        // Métodos permitidos
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // Headers permitidos (incluimos X-User-Id y Authorization)
-        config.setAllowedHeaders(List.of(
-                "Authorization",
-                "Content-Type",
-                "X-Requested-With",
-                "X-User-Id"
-        ));
-
-        // Para dev no necesitamos cookies
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
         config.setAllowCredentials(false);
-
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // Con context-path /api, esto cubre /api/cart/**, etc.
+        // Con context-path /api, esto cubre /api/** internamente
         source.registerCorsConfiguration("/**", config);
         return source;
     }
 
     /**
-     * Decoder para validar JWT HS256 usando la misma secret key
-     * que ms-usuarios (y ms-orders).
+     * Decodificador de JWT (HS256) usando la misma clave que ms-usuarios.
      */
     @Bean
     public JwtDecoder jwtDecoder() {
-        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
-        SecretKey key = new SecretKeySpec(keyBytes, "HmacSHA256");
+        SecretKey key = new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
         return NimbusJwtDecoder.withSecretKey(key).build();
+    }
+
+    /**
+     * Conversor que:
+     *  - Lee el claim "role" del token (ej: "ADMIN", "CUSTOMER")
+     *  - Lo mapea a ROLE_ADMIN, ROLE_CUSTOMER, etc.
+     */
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter gac = new JwtGrantedAuthoritiesConverter();
+        gac.setAuthoritiesClaimName("role");
+        gac.setAuthorityPrefix("ROLE_");
+
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(gac);
+        return converter;
     }
 }
