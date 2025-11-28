@@ -8,13 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Servicio ahora conectado a Supabase mediante ProductosDao.
- * Mantiene los mismos DTOs públicos usados por el Controller.
+ * Servicio de productos conectado a Postgres (Docker) mediante ProductosDao.
+ * Mantiene los DTOs públicos usados por el Controller.
  */
 @Service
 public class ProductosService {
 
-    /* ======== DTOs públicos (sin cambios para el Controller) ======== */
+    /* ======== DTOs públicos (usados por el Controller) ======== */
     public static class Product {
         public String id;
         public Integer categoryId; // nullable
@@ -128,8 +128,9 @@ public class ProductosService {
         return new Category(r.id, r.name);
     }
 
-    /* ======== API del servicio ======== */
-    public PagedProducts listProducts(String q, Integer categoryId, String sort, int page, int size) throws RuntimeException {
+    /* ======== API del servicio (catálogo público) ======== */
+
+    public PagedProducts listProducts(String q, Integer categoryId, String sort, int page, int size) {
         try {
             int safeSize = Math.max(size, 1);
             int safePage = Math.max(page, 0);
@@ -194,6 +195,89 @@ public class ProductosService {
             );
         } catch (Exception e) {
             return java.util.Map.of("db", "error", "message", e.getMessage());
+        }
+    }
+
+    /* ======== API del servicio (ADMIN: crear / editar / borrar) ======== */
+
+    public Product createProduct(Product input) {
+        if (input == null) {
+            throw new IllegalArgumentException("Producto requerido");
+        }
+        if (input.id == null || input.id.isBlank()) {
+            throw new IllegalArgumentException("El id del producto es obligatorio (ej: TC001)");
+        }
+        if (input.name == null || input.name.isBlank()) {
+            throw new IllegalArgumentException("El nombre del producto es obligatorio");
+        }
+        if (input.price == null || input.price < 0) {
+            throw new IllegalArgumentException("El precio debe ser un entero mayor o igual a 0");
+        }
+
+        ProductosDao.ProductRow row = new ProductosDao.ProductRow();
+        row.id = input.id;
+        row.categoryId = input.categoryId;
+        row.name = input.name;
+        row.price = input.price;
+        row.imagePath = input.imagePath;
+        row.description = input.description;
+        row.tags = input.tags;
+        row.sizes = input.sizes;
+
+        try {
+            dao.insertProduct(row);
+            // devolvemos el producto desde BD (ya normalizado)
+            return getProduct(row.id);
+        } catch (Exception e) {
+            throw new RuntimeException("DB error on createProduct", e);
+        }
+    }
+
+    public Product updateProduct(String id, Product input) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("El id del producto es obligatorio");
+        }
+        if (input == null) {
+            throw new IllegalArgumentException("Cuerpo de producto requerido");
+        }
+
+        ProductosDao.ProductRow row = new ProductosDao.ProductRow();
+        row.id = id; // usamos el id de la URL
+        row.categoryId = input.categoryId;
+        row.name = input.name;
+        row.price = input.price;
+        row.imagePath = input.imagePath;
+        row.description = input.description;
+        row.tags = input.tags;
+        row.sizes = input.sizes;
+
+        try {
+            int updated = dao.updateProduct(row);
+            if (updated == 0) {
+                throw new IllegalArgumentException("Producto no encontrado con id=" + id);
+            }
+            return getProduct(id);
+        } catch (RuntimeException e) {
+            // re-lanzamos IllegalArgumentException tal cual
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("DB error on updateProduct", e);
+        }
+    }
+
+    public void deleteProduct(String id) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("El id del producto es obligatorio");
+        }
+        try {
+            int deleted = dao.deleteProduct(id);
+            if (deleted == 0) {
+                throw new IllegalArgumentException("Producto no encontrado con id=" + id);
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("DB error on deleteProduct", e);
         }
     }
 }

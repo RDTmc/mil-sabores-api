@@ -3,77 +3,43 @@ package com.milsabores.api.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtValidators;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
-import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.core.authority.AuthorityUtils;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
 public class SecurityConfig {
 
-    private final SupabaseJwtConfig supabase;
-
-    public SecurityConfig(SupabaseJwtConfig supabase) {
-        this.supabase = supabase;
-    }
-
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // API stateless
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> { }) // usa tu configuración CORS existente (CorsConfig)
+                .cors(Customizer.withDefaults())   // 👉 Usa el CorsConfig existente
+                .sessionManagement(sm ->
+                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .authorizeHttpRequests(auth -> auth
-                        // público: catálogo + swagger + debug
-                        .requestMatchers(HttpMethod.GET,
-                                "/products/**",
-                                "/categories/**",
-                                "/featured/**",
-                                "/_debug/**",
+                        // Permitimos OPTIONS para CORS
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Swagger público
+                        .requestMatchers(
+                                "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api-docs/**"
                         ).permitAll()
-                        // resto: por ahora permitido
+
+                        // Todo el resto público por ahora
                         .anyRequest().permitAll()
                 )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt
-                                .decoder(jwtDecoder())
-                                .jwtAuthenticationConverter(jwtAuthenticationConverter())
-                        )
-                );
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .formLogin(form -> form.disable());
 
         return http.build();
-    }
-
-    @Bean
-    JwtDecoder jwtDecoder() {
-        NimbusJwtDecoder decoder = NimbusJwtDecoder
-                .withJwkSetUri(supabase.getJwks())
-                .build();
-
-        OAuth2TokenValidator<Jwt> withIssuer =
-                JwtValidators.createDefaultWithIssuer(supabase.getIssuer());
-
-        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(withIssuer));
-        return decoder;
-    }
-
-    @Bean
-    JwtAuthenticationConverter jwtAuthenticationConverter() {
-        // Por ahora no derivamos roles del token; principal = "sub"
-        JwtAuthenticationConverter conv = new JwtAuthenticationConverter();
-        conv.setJwtGrantedAuthoritiesConverter(jwt -> AuthorityUtils.NO_AUTHORITIES);
-        return conv;
     }
 }

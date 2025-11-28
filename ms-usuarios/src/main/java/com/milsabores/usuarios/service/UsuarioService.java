@@ -7,6 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -15,7 +16,7 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
 
-    // Ahora usamos el PasswordEncoder que viene desde SecurityConfig
+    // PasswordEncoder viene desde SecurityConfig
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -48,9 +49,9 @@ public class UsuarioService {
                 .passwordHash(hash)
                 .fullName(fullName)
                 .phone(phone)
-                .role("CUSTOMER")       // valor por defecto, se puede parametrizar más adelante
-                .birthDate(birthDate)   // ✅ nuevo
-                .registrationCode(normalizedCode) // ✅ nuevo
+                .role("CUSTOMER")       // valor por defecto
+                .birthDate(birthDate)
+                .registrationCode(normalizedCode)
                 .build();
 
         return usuarioRepository.save(entity);
@@ -79,5 +80,12 @@ public class UsuarioService {
 
     public Optional<UsuarioEntity> findById(String id) {
         return usuarioRepository.findById(id);
+    }
+
+    /**
+     * 🔹 Nuevo: listar todos los usuarios (para el panel de administración).
+     */
+    public List<UsuarioEntity> findAllUsers() {
+        return usuarioRepository.findAll();
     }
 }

@@ -3,6 +3,11 @@ package com.milsabores.orders.security;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,6 +28,23 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@OpenAPIDefinition(
+        info = @Info(
+                title = "ms-orders API",
+                version = "v1",
+                description = "Microservicio de órdenes de compra para Pastelería Mil Sabores"
+        ),
+        security = {
+                @SecurityRequirement(name = "bearerAuth")
+        }
+)
+@SecurityScheme(
+        name = "bearerAuth",
+        type = SecuritySchemeType.HTTP,
+        scheme = "bearer",
+        bearerFormat = "JWT",
+        description = "JWT emitido por ms-usuarios (Authorization: Bearer {token})"
+)
 public class SecurityConfig {
 
     /**
@@ -45,6 +67,15 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Permitimos OPTIONS para CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Swagger / OpenAPI sin autenticación
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/api-docs/**"
+                        ).permitAll()
+
                         // Todos los endpoints de órdenes requieren JWT válido
                         .anyRequest().authenticated()
                 )
@@ -86,7 +117,7 @@ public class SecurityConfig {
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // Con context-path /api, esto cubre /api/orders/**, etc.
+        // Con context-path /api, esto cubre /api/** internamente
         source.registerCorsConfiguration("/**", config);
         return source;
     }

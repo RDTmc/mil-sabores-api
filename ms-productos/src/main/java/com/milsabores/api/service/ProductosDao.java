@@ -7,8 +7,8 @@ import java.sql.*;
 import java.util.*;
 
 /**
- * DAO de lectura contra Supabase (PostgreSQL) usando JDBC básico.
- * No requiere dependencias adicionales. Usa DataSource autoconfigurado por Spring Boot.
+ * DAO de lectura/escritura contra Postgres (Docker) usando JDBC básico.
+ * Usa el DataSource autoconfigurado por Spring Boot (ms-productos-pool).
  */
 @Repository
 public class ProductosDao {
@@ -67,7 +67,14 @@ public class ProductosDao {
         return c;
     }
 
-    /* ===================== QUERIES ===================== */
+    private static PreparedStatement prepare(Connection conn, String sql, List<Object> params) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement(sql);
+        int i = 1;
+        for (Object p : params) ps.setObject(i++, p);
+        return ps;
+    }
+
+    /* ===================== QUERIES LECTURA ===================== */
 
     public long countProducts(String q, Integer categoryId) throws SQLException {
         StringBuilder sql = new StringBuilder("""
@@ -105,7 +112,7 @@ public class ProductosDao {
             switch (field) {
                 case "price" -> orderBy = "p.price " + (desc ? "desc" : "asc");
                 case "name"  -> orderBy = "p.name "  + (desc ? "desc" : "asc");
-                case "createdAt" -> orderBy = "p.id " + (desc ? "desc" : "asc"); // placeholder si luego agregas timestamp
+                case "createdAt" -> orderBy = "p.id " + (desc ? "desc" : "asc"); // placeholder
                 default -> { /* mantener por defecto */ }
             }
         }
@@ -186,11 +193,110 @@ public class ProductosDao {
         }
     }
 
-    /* ===================== UTIL ===================== */
-    private static PreparedStatement prepare(Connection conn, String sql, List<Object> params) throws SQLException {
-        PreparedStatement ps = conn.prepareStatement(sql);
-        int i = 1;
-        for (Object p : params) ps.setObject(i++, p);
-        return ps;
+    /* ===================== QUERIES ESCRITURA (ADMIN) ===================== */
+
+    public void insertProduct(ProductRow p) throws SQLException {
+        String sql = """
+            insert into public.products
+            (id, category_id, name, price, image_path, description, tags, sizes)
+            values (?,?,?,?,?,?,?,?)
+        """;
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, p.id);
+
+            if (p.categoryId != null) ps.setInt(2, p.categoryId);
+            else ps.setNull(2, Types.INTEGER);
+
+            if (p.name != null) ps.setString(3, p.name);
+            else ps.setNull(3, Types.VARCHAR);
+
+            if (p.price != null) ps.setInt(4, p.price);
+            else ps.setNull(4, Types.INTEGER);
+
+            if (p.imagePath != null) ps.setString(5, p.imagePath);
+            else ps.setNull(5, Types.VARCHAR);
+
+            if (p.description != null) ps.setString(6, p.description);
+            else ps.setNull(6, Types.VARCHAR);
+
+            if (p.tags != null && !p.tags.isEmpty()) {
+                Array tagsArray = conn.createArrayOf("text", p.tags.toArray());
+                ps.setArray(7, tagsArray);
+            } else {
+                ps.setNull(7, Types.ARRAY);
+            }
+
+            if (p.sizes != null && !p.sizes.isEmpty()) {
+                Array sizesArray = conn.createArrayOf("text", p.sizes.toArray());
+                ps.setArray(8, sizesArray);
+            } else {
+                ps.setNull(8, Types.ARRAY);
+            }
+
+            ps.executeUpdate();
+        }
+    }
+
+    public int updateProduct(ProductRow p) throws SQLException {
+        String sql = """
+            update public.products
+               set category_id = ?,
+                   name        = ?,
+                   price       = ?,
+                   image_path  = ?,
+                   description = ?,
+                   tags        = ?,
+                   sizes       = ?
+             where id = ?
+        """;
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            if (p.categoryId != null) ps.setInt(1, p.categoryId);
+            else ps.setNull(1, Types.INTEGER);
+
+            if (p.name != null) ps.setString(2, p.name);
+            else ps.setNull(2, Types.VARCHAR);
+
+            if (p.price != null) ps.setInt(3, p.price);
+            else ps.setNull(3, Types.INTEGER);
+
+            if (p.imagePath != null) ps.setString(4, p.imagePath);
+            else ps.setNull(4, Types.VARCHAR);
+
+            if (p.description != null) ps.setString(5, p.description);
+            else ps.setNull(5, Types.VARCHAR);
+
+            if (p.tags != null && !p.tags.isEmpty()) {
+                Array tagsArray = conn.createArrayOf("text", p.tags.toArray());
+                ps.setArray(6, tagsArray);
+            } else {
+                ps.setNull(6, Types.ARRAY);
+            }
+
+            if (p.sizes != null && !p.sizes.isEmpty()) {
+                Array sizesArray = conn.createArrayOf("text", p.sizes.toArray());
+                ps.setArray(7, sizesArray);
+            } else {
+                ps.setNull(7, Types.ARRAY);
+            }
+
+            ps.setString(8, p.id);
+
+            return ps.executeUpdate();
+        }
+    }
+
+    public int deleteProduct(String id) throws SQLException {
+        String sql = "delete from public.products where id = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, id);
+            return ps.executeUpdate();
+        }
     }
 }

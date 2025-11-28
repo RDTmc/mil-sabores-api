@@ -12,7 +12,7 @@ import java.time.LocalDate;
 
 /**
  * DTOs relacionados a autenticación (register/login) para ms-usuarios.
- * Se agrupan en una única clase contenedora
+ * Se agrupan en una única clase contenedora.
  */
 public class AuthDtos {
 
@@ -86,5 +86,20 @@ public class AuthDtos {
     @AllArgsConstructor
     public static class ErrorBody {
         private String message;
+    }
+
+    /**
+     * DTO para el panel de administración (lista de usuarios).
+     * Lo usaremos en /admin/users.
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AdminUserResponse {
+        private String id;
+        private String email;
+        private String fullName;
+        private String phone;
+        private String role;
     }
 }
