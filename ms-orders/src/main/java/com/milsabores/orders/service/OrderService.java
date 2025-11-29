@@ -1,5 +1,9 @@
 package com.milsabores.orders.service;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 import com.milsabores.orders.dto.OrderDtos;
 import com.milsabores.orders.model.OrderEntity;
 import com.milsabores.orders.model.OrderItemEntity;
@@ -117,6 +121,28 @@ public class OrderService {
                 .map(this::toDto)
                 .toList();
     }
+
+    /**
+     * Lista las últimas órdenes creadas en todo el sistema (global, no por usuario),
+     * ordenadas desde la más reciente.
+     * Pensado para el dashboard de administración.
+     */
+    @Transactional(readOnly = true)
+    public List<OrderDtos.OrderResponse> listLatestOrders(int limit) {
+        int size = Math.max(1, Math.min(limit, 50)); // protegemos el tamaño [1..50]
+
+        Pageable pageable = PageRequest.of(
+                0,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return orderRepository.findAll(pageable)
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
 
     // ================= Helpers =================
 
