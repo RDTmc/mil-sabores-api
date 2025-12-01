@@ -83,9 +83,49 @@ public class UsuarioService {
     }
 
     /**
-     * 🔹 Nuevo: listar todos los usuarios (para el panel de administración).
+     * Listar todos los usuarios (para el panel de administración).
      */
     public List<UsuarioEntity> findAllUsers() {
         return usuarioRepository.findAll();
+    }
+
+    /**
+     * 🔹 Actualizar datos básicos de un usuario (para admin).
+     *   - fullName
+     *   - phone
+     *   - role
+     */
+    public UsuarioEntity updateUser(String id,
+                                    String fullName,
+                                    String phone,
+                                    String role) {
+
+        UsuarioEntity user = usuarioRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        if (fullName != null && !fullName.isBlank()) {
+            user.setFullName(fullName.trim());
+        }
+
+        if (phone != null) {
+            user.setPhone(phone.trim());
+        }
+
+        if (role != null && !role.isBlank()) {
+            // Guardamos el rol en MAYÚSCULAS por consistencia: ADMIN / CUSTOMER
+            user.setRole(role.trim().toUpperCase());
+        }
+
+        return usuarioRepository.save(user);
+    }
+
+    /**
+     * 🔹 Eliminar usuario (para admin).
+     */
+    public void deleteUser(String id) {
+        if (!usuarioRepository.existsById(id)) {
+            throw new IllegalArgumentException("Usuario no encontrado");
+        }
+        usuarioRepository.deleteById(id);
     }
 }

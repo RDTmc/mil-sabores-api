@@ -42,7 +42,7 @@ public class AuthDtos {
 
         /**
          * Código de registro, por ejemplo:
-         *  - "FELICES50" para la promo 10% de por vida.
+         * - "FELICES50" para la promo 10% de por vida.
          * Puede venir null si el usuario no usa código.
          */
         private String registrationCode;
@@ -106,6 +106,30 @@ public class AuthDtos {
         private String email;
         private String fullName;
         private String phone;
+        private String role;
+    }
+
+    /**
+     * DTO para actualizar un usuario desde el panel admin.
+     * Todos los campos son opcionales (solo se modifican los no-nulos).
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AdminUpdateUserRequest {
+
+        // Nombre completo (opcional)
+        @Size(max = 100)
+        private String fullName;
+
+        // Teléfono (opcional)
+        @Size(max = 30)
+        private String phone;
+
+        /**
+         * Rol del usuario. Si viene, debe ser "ADMIN" o "CUSTOMER".
+         * Si es null, se deja el rol actual.
+         */
         private String role;
     }
 }
