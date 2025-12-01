@@ -64,11 +64,13 @@ public class AuthController {
             // Ahora generamos un JWT real
             String jwt = jwtService.generateToken(u);
 
+            // 🔹 Incluimos el rol en la respuesta al frontend
             AuthDtos.LoginResponse response = new AuthDtos.LoginResponse(
-                    jwt,          // token (JWT)
+                    jwt,              // token (JWT)
                     u.getId(),
                     u.getEmail(),
-                    u.getFullName()
+                    u.getFullName(),
+                    u.getRole()       // 👈 NUEVO: rol ("CUSTOMER" / "ADMIN")
             );
 
             return ResponseEntity.ok(response);

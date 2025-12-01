@@ -27,15 +27,16 @@ public class AdminUsuarioController {
     private final UsuarioService usuarioService;
 
     @GetMapping
-    public ResponseEntity<List<AuthDtos.UsuarioPublicDto>> getAllUsers() {
+    public ResponseEntity<List<AuthDtos.AdminUserResponse>> getAllUsers() {
         List<UsuarioEntity> entities = usuarioService.findAllUsers();
 
-        List<AuthDtos.UsuarioPublicDto> dtos = entities.stream()
-                .map(u -> new AuthDtos.UsuarioPublicDto(
+        List<AuthDtos.AdminUserResponse> dtos = entities.stream()
+                .map(u -> new AuthDtos.AdminUserResponse(
                         u.getId(),
                         u.getEmail(),
                         u.getFullName(),
-                        u.getPhone()
+                        u.getPhone(),
+                        u.getRole()
                 ))
                 .toList();
 

@@ -69,6 +69,12 @@ public class AuthDtos {
         private String userId;
         private String email;
         private String fullName;
+
+        /**
+         * Rol del usuario (ej: "CUSTOMER", "ADMIN").
+         * El frontend lo usará para saber si debe mostrar el panel Admin.
+         */
+        private String role;
     }
 
     @Data
