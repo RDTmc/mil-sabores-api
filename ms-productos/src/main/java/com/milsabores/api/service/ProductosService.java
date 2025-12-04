@@ -123,6 +123,63 @@ public class ProductosService {
         );
     }
 
+    /* ======== REGLAS DE NEGOCIO: MARCA / DISTRIBUIDOR / DESCUENTOS ======== */
+
+    /** Aplica un % de descuento sobre un entero (precio CLP). */
+    private static int applyPercentDiscount(int price, int percent) {
+        if (percent <= 0) return price;
+        double factor = (100.0 - percent) / 100.0;
+        return (int) Math.round(price * factor);
+    }
+
+    /**
+     * Regla de negocio:
+     * - Si la "marca" es distribuidor → 20% descuento
+     * - Si el distribuidor es "Santa Rosa" → 20% descuento
+     *
+     * En este ejemplo usamos tags / nombre / descripción para identificarlo,
+     * sin tocar la estructura de la BD.
+     */
+    private static Product applyDiscountRules(Product p) {
+        if (p == null || p.price == null) return p;
+
+        boolean isDistribuidor = false;
+        boolean isSantaRosa = false;
+
+        // 1) Revisamos tags (si usas tags como ["distribuidor", "santa rosa"])
+        if (p.tags != null) {
+            for (String tag : p.tags) {
+                if (tag == null) continue;
+                String normalized = tag.trim().toLowerCase();
+                if (normalized.contains("distribuidor")) {
+                    isDistribuidor = true;
+                }
+                if (normalized.contains("santa rosa") || normalized.contains("santarosa")) {
+                    isSantaRosa = true;
+                }
+            }
+        }
+
+        // 2) También revisamos nombre y descripción (por si lo manejas como texto)
+        String name = p.name != null ? p.name.toLowerCase() : "";
+        String desc = p.description != null ? p.description.toLowerCase() : "";
+
+        if (name.contains("distribuidor") || desc.contains("distribuidor")) {
+            isDistribuidor = true;
+        }
+        if (name.contains("santa rosa") || desc.contains("santa rosa")) {
+            isSantaRosa = true;
+        }
+
+        // 3) Regla final: si cumple alguna de las condiciones → 20% descuento
+        if (isDistribuidor || isSantaRosa) {
+            p.price = applyPercentDiscount(p.price, 20);
+        }
+
+        return p;
+    }
+
+
     private static Category toDto(ProductosDao.CategoryRow r) {
         if (r == null) return null;
         return new Category(r.id, r.name);
@@ -138,22 +195,26 @@ public class ProductosService {
             long total = dao.countProducts(q, categoryId);
             List<Product> items = new ArrayList<>();
             for (ProductosDao.ProductRow r : dao.findProducts(q, categoryId, sort, safePage, safeSize)) {
-                items.add(toDto(r));
+                Product p = toDto(r);
+                applyDiscountRules(p);   // aquí aplicamos la lógica
+                items.add(p);
             }
             return new PagedProducts(items, safePage, safeSize, total);
         } catch (Exception e) {
-            // Propaga como RuntimeException para que lo capture @ControllerAdvice → 500 + {"message": "..."}
             throw new RuntimeException("DB error on listProducts", e);
         }
     }
 
+
     public Product getProduct(String id) {
         try {
-            return toDto(dao.findProductById(id));
+            Product p = toDto(dao.findProductById(id));
+            return applyDiscountRules(p);  // regla también en detalle
         } catch (Exception e) {
             throw new RuntimeException("DB error on getProduct", e);
         }
     }
+
 
     @Cacheable(cacheNames = "categories")
     public List<Category> listCategories() {
@@ -170,12 +231,17 @@ public class ProductosService {
     public List<Product> listFeatured() {
         try {
             List<Product> out = new ArrayList<>();
-            for (ProductosDao.ProductRow r : dao.findFeatured()) out.add(toDto(r));
+            for (ProductosDao.ProductRow r : dao.findFeatured()) {
+                Product p = toDto(r);
+                applyDiscountRules(p);   // destacados también con descuento
+                out.add(p);
+            }
             return out;
         } catch (Exception e) {
             throw new RuntimeException("DB error on listFeatured", e);
         }
     }
+
 
     /**
      * Debug snapshot para diagnóstico rápido
