@@ -63,6 +63,12 @@ public class OrderDtos {
          */
         @NotEmpty
         private List<CreateOrderItemRequest> items;
+
+        /**
+         * Código de promoción escrito por el cliente en el checkout (opcional).
+         * Ej: "FELICES50".
+         */
+        private String discountCode;
     }
 
     // --------- RESPONSES ---------

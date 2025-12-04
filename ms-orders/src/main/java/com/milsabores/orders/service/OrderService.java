@@ -43,9 +43,15 @@ public class OrderService {
                 .mapToInt(i -> i.getUnitPrice() * i.getQuantity())
                 .sum();
 
-        // 2) Evaluar promoción según datos del usuario
+        // 2) Evaluar promoción según datos del usuario + cupón manual del checkout
         PromotionService.AppliedPromotion promo =
-                promotionService.evaluatePromotion(email, birthDate, registrationCode, LocalDate.now());
+                promotionService.evaluatePromotion(
+                        email,
+                        birthDate,
+                        registrationCode,
+                        request.getDiscountCode(), // ⬅️ NUEVO: cupón escrito en /pedido
+                        LocalDate.now()
+                );
 
         int discountAmount = 0;
         String discountCode = null;
@@ -96,6 +102,7 @@ public class OrderService {
 
         return toDto(saved);
     }
+
 
     /**
      * Obtener una orden específica del usuario.
