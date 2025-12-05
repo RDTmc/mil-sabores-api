@@ -1,6 +1,4 @@
-Te dejo un README completo para `mil-sabores-api` listo para pegar en `README.md`. Está pensado para tu defensa: explica la arquitectura, puertos, rutas de cada microservicio y cómo llegar a Swagger.
 
-Ajusta puertos o URLs si cambiaste algo en `application.properties`.
 
 ---
 
