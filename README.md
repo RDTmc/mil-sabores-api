@@ -1,8 +1,6 @@
 
 
----
 
-````markdown
 # Mil Sabores – Backend (Microservicios)
 
 Conjunto de **microservicios en Spring Boot** para el proyecto **Pastelería Mil Sabores**, que provee:
