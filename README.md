@@ -85,24 +85,19 @@ mil-sabores-api/
     ├── src/main/java/com/milsabores/orders/...
     └── src/main/resources/application.properties
 ````
-
-> Los nombres de paquetes pueden variar ligeramente según cada módulo, pero siguen la convención `com.milsabores.<microservicio>`.
-
 ---
 
 ## 4. Requisitos previos
 
 * **Java JDK 21**
 * **Maven 3.x**
-* **PostgreSQL** (o la base que hayas configurado) corriendo y accesible desde cada microservicio.
-* Puerto libres (por defecto, sugeridos):
+* **PostgreSQL** 
+* Puerto libres:
 
   * `ms-usuarios` → `8082`
   * `ms-productos` → `8081`
   * `ms-cart` → `8084`
   * `ms-orders` → `8083`
-
-Revisa/ajusta los puertos reales en cada `application.properties`.
 
 ---
 
@@ -163,16 +158,12 @@ mvn spring-boot:run
 
 ## 6. URLs base por microservicio
 
-Asumiendo puertos por defecto:
-
 | Microservicio | Descripción            | URL base REST               |
 | ------------- | ---------------------- | --------------------------- |
 | ms-productos  | Catálogo de productos  | `http://localhost:8081/api` |
 | ms-usuarios   | Auth, usuarios y roles | `http://localhost:8082/api` |
 | ms-orders     | Órdenes y promociones  | `http://localhost:8083/api` |
 | ms-cart       | Carrito de compras     | `http://localhost:8084/api` |
-
-En el frontend React, estos valores se usan en `.env` como:
 
 ```env
 VITE_API_URL=http://localhost:8081/api
@@ -206,10 +197,6 @@ Por ejemplo:
 
 * **ms-cart**:
   `http://localhost:8084/swagger-ui/index.html`
-
-Desde estas pantallas puedes explorar todos los endpoints, modelos y probar llamadas directamente.
-
-> Si tu configuración usa otra ruta (como `/swagger-ui.html`), ajusta la URL en consecuencia.
 
 ---
 
